@@ -253,7 +253,7 @@ func TestUpdateProduct(t *testing.T) {
 
 				queryUpdate := `
 					UPDATE products 
-					SET name=?, image=?, category=?, description=?, rating=?, num_reviews=?, price=?, count_in_stock=?
+					SET name=?, image=?, category=?, description=?, rating=?, num_reviews=?, price=?, count_in_stock=?, updated_at=?
 					WHERE id=?
 				`
 				mock.ExpectExec(queryUpdate).WillReturnResult(sqlmock.NewResult(1, 1))
@@ -271,7 +271,7 @@ func TestUpdateProduct(t *testing.T) {
 			test: func(t *testing.T, st *MySQLStore, mock sqlmock.Sqlmock) {
 				query := `
 					UPDATE products 
-					SET name=?, image=?, category=?, description=?, rating=?, num_reviews=?, price=?, count_in_stock=?
+					SET name=?, image=?, category=?, description=?, rating=?, num_reviews=?, price=?, count_in_stock=?, updated_at=?
 					WHERE id=?
 				`
 				mock.ExpectExec(query).WillReturnError(fmt.Errorf("error updating product"))

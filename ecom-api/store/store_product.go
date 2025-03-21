@@ -44,8 +44,8 @@ func (s *MySQLStore) GetProduct(ctx context.Context, id int64) (*Product, error)
 	return &p, nil
 }
 
-func (s *MySQLStore) ListProducts(ctx context.Context) ([]*Product, error) {
-	var products []*Product
+func (s *MySQLStore) ListProducts(ctx context.Context) ([]Product, error) {
+	var products []Product
 	query := `SELECT * FROM products`
 	if err := s.db.SelectContext(ctx, &products, query); err != nil {
 		return nil, fmt.Errorf("error listing products: %w", err)
@@ -57,7 +57,7 @@ func (s *MySQLStore) ListProducts(ctx context.Context) ([]*Product, error) {
 func (s *MySQLStore) UpdateProduct(ctx context.Context, p *Product) (*Product, error) {
 	query := `
 		UPDATE products 
-		SET name=:name, image=:image, category=:category, description=:description, rating=:rating, num_reviews=:num_reviews, price=:price, count_in_stock=:count_in_stock
+		SET name=:name, image=:image, category=:category, description=:description, rating=:rating, num_reviews=:num_reviews, price=:price, count_in_stock=:count_in_stock, updated_at=:updated_at
 		WHERE id=:id
 	`
 	if _, err := s.db.NamedExecContext(ctx, query, p); err != nil {
@@ -67,7 +67,7 @@ func (s *MySQLStore) UpdateProduct(ctx context.Context, p *Product) (*Product, e
 	return p, nil
 }
 
-func (s *MySQLStore) DeleteProduct(ctx context.Context, id int64) error {	
+func (s *MySQLStore) DeleteProduct(ctx context.Context, id int64) error {
 	query := `DELETE FROM products WHERE id=?`
 	if _, err := s.db.ExecContext(ctx, query, id); err != nil {
 		return fmt.Errorf("error deleting product: %w", err)
