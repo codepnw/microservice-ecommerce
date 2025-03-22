@@ -20,6 +20,18 @@ func RegisterRoutes(handler *handler) *gin.Engine {
 		}
 	}
 
+	orders := r.Group("/orders")
+	{
+		orders.POST("/", handler.createOrder)
+		orders.GET("/", handler.listOrders)
+
+		orderID := orders.Group("/:id")
+		{
+			orderID.GET("", handler.getOrder)
+			orderID.DELETE("", handler.deleteOrder)
+		}
+	}
+
 	return r
 }
 
