@@ -32,6 +32,16 @@ func RegisterRoutes(handler *handler) *gin.Engine {
 		}
 	}
 
+	users := r.Group("/users")
+	{
+		users.POST("/", handler.createUser)
+		users.GET("/", handler.listUsers)
+		users.PATCH("/", handler.updateUser)
+		users.DELETE("/:id", handler.deleteUser)
+
+		users.POST("/login", handler.loginUser)
+	}
+
 	return r
 }
 

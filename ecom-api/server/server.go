@@ -51,3 +51,24 @@ func (s *Server) ListOrder(ctx context.Context) ([]store.Order, error) {
 func (s *Server) DeleteOrder(ctx context.Context, id int64) error {
 	return s.store.DeleteOrder(ctx, id)
 }
+
+// ========= USER ==========
+func (s *Server) CreateUser(ctx context.Context, u *store.User) (*store.User, error) {
+	return s.store.CreateUser(ctx, u)
+} 
+
+func (s *Server) GetUser(ctx context.Context, email string) (*store.User, error) {
+	return s.store.GetUser(ctx, email)
+}
+
+func (s *Server) ListUsers(ctx context.Context) ([]store.User, error) {
+	return s.store.ListUsers(ctx)
+}
+
+func (s *Server) UpdateUser(ctx context.Context, u *store.User) (*store.User, error) {
+	return s.store.UpdateUser(ctx, u)
+}
+
+func (s *Server) DeleteUser(ctx context.Context, id int64) error {
+	return s.store.DeleteUser(ctx, id)
+}
