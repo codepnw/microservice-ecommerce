@@ -55,7 +55,7 @@ func (s *Server) DeleteOrder(ctx context.Context, id int64) error {
 // ========= USER ==========
 func (s *Server) CreateUser(ctx context.Context, u *store.User) (*store.User, error) {
 	return s.store.CreateUser(ctx, u)
-} 
+}
 
 func (s *Server) GetUser(ctx context.Context, email string) (*store.User, error) {
 	return s.store.GetUser(ctx, email)
@@ -71,4 +71,21 @@ func (s *Server) UpdateUser(ctx context.Context, u *store.User) (*store.User, er
 
 func (s *Server) DeleteUser(ctx context.Context, id int64) error {
 	return s.store.DeleteUser(ctx, id)
+}
+
+// ========= SESSION ==========
+func (s *Server) CreateSession(ctx context.Context, sess *store.Session) (*store.Session, error) {
+	return s.store.CreateSession(ctx, sess)
+}
+
+func (s *Server) GetSession(ctx context.Context, id string) (*store.Session, error) {
+	return s.store.GetSession(ctx, id)
+}
+
+func (s *Server) RevokeSession(ctx context.Context, id string) error {
+	return s.store.RevokeSession(ctx, id)
+}
+
+func (s *Server) DeleteSession(ctx context.Context, id string) error {
+	return s.store.DeleteSession(ctx, id)
 }

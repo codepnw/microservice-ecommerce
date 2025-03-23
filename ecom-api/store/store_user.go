@@ -38,7 +38,7 @@ func (s *MySQLStore) ListUsers(ctx context.Context) ([]User, error) {
 	var users []User
 
 	if err := s.db.SelectContext(ctx, &users, "SELECT * FROM users"); err != nil {
-		return nil, fmt.Errorf("error updating user: %w", err)
+		return nil, fmt.Errorf("error getting users: %w", err)
 	}
 
 	return users, nil

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -112,23 +113,118 @@ func (h *handler) loginUser(c *gin.Context) {
 		return
 	}
 
-	// create JWT 
-	accessToken, _, err := h.tokenMaker.CreateToken(gu.ID, gu.Email, gu.IsAdmin, 15*time.Minute)
+	// create JWT
+	accessToken, accessClaims, err := h.tokenMaker.CreateToken(gu.ID, gu.Email, gu.IsAdmin, 15*time.Minute)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	refreshToken, refreshClaims, err := h.tokenMaker.CreateToken(gu.ID, gu.Email, gu.IsAdmin, 24*time.Hour)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	log.Println(refreshClaims.RegisteredClaims.ExpiresAt.Time)
+
+	// Session
+	session, err := h.server.CreateSession(c.Request.Context(), &store.Session{
+		ID:           refreshClaims.RegisteredClaims.ID,
+		UserEmail:    gu.Email,
+		RefreshToken: refreshToken,
+		IsRevoked:    false,
+		ExpiresAt:    refreshClaims.RegisteredClaims.ExpiresAt.Time,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error-3": err.Error()})
+		return
+	}
+
 	res := LoginUserRes{
-		AccessToken: accessToken,
-		User: UserRes{
-			Name:    gu.Name,
-			Email:   gu.Email,
-			IsAdmin: gu.IsAdmin,
-		},
+		SessionID:             session.ID,
+		AccessToken:           accessToken,
+		RefreshToken:          refreshToken,
+		AccessTokenExpiresAt:  accessClaims.RegisteredClaims.ExpiresAt.Time,
+		RefreshTokenExpiresAt: refreshClaims.RegisteredClaims.ExpiresAt.Time,
+		User:                  toUserRes(gu),
 	}
 
 	c.JSON(http.StatusOK, res)
+}
+
+func (h *handler) logoutUser(c *gin.Context) {
+	// later get session id from token payload
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing session ID"})
+		return
+	}
+
+	if err := h.server.DeleteSession(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusNoContent, nil)
+}
+
+func (h *handler) renewAccessToken(c *gin.Context) {
+	var req RenewAccessTokenReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	refreshClaims, err := h.tokenMaker.VerifyToken(req.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	session, err := h.server.GetSession(c.Request.Context(), refreshClaims.RegisteredClaims.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if session.IsRevoked {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "session revoked"})
+		return
+	}
+
+	if session.UserEmail != refreshClaims.Email {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid session"})
+		return
+	}
+
+	accessToken, accessClaims, err := h.tokenMaker.CreateToken(refreshClaims.ID, refreshClaims.Email, refreshClaims.IsAdmin, 15*time.Minute)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	res := RenewAccessTokenRes{
+		AccessToken:          accessToken,
+		AccessTokenExpiresAt: accessClaims.RegisteredClaims.ExpiresAt.Time,
+	}
+
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *handler) revokeSession(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing session ID"})
+		return
+	}
+
+	if err := h.server.RevokeSession(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusNoContent, nil)
 }
 
 func toStoreUser(u UserReq) *store.User {

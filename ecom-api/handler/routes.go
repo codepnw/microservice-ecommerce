@@ -40,6 +40,13 @@ func RegisterRoutes(handler *handler) *gin.Engine {
 		users.DELETE("/:id", handler.deleteUser)
 
 		users.POST("/login", handler.loginUser)
+		users.POST("/logout", handler.logoutUser)
+
+		token := users.Group("/token")
+		{
+			token.POST("/renew", handler.renewAccessToken)
+			token.POST("/revoke/:id", handler.revokeSession)
+		}
 	}
 
 	return r

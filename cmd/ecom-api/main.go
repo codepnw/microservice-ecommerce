@@ -27,7 +27,7 @@ func main() {
 
 	st := store.NewMySQLStore(db.GetDB())
 	srv := server.NewServer(st)
-	hdl := handler.NewHandler(srv)
+	hdl := handler.NewHandler(srv, os.Getenv("JWT_SECRET"))
 
 	handler.RegisterRoutes(hdl)
 	handler.Start(os.Getenv("APP_PORT"))
