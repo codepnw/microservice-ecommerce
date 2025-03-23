@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/codepnw/microservice-ecommerce/ecom-api/store"
+	"github.com/codepnw/microservice-ecommerce/token"
 	"github.com/codepnw/microservice-ecommerce/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -59,7 +60,14 @@ func (h *handler) updateUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.server.GetUser(c.Request.Context(), u.Email)
+	// Get Context
+	claims, exists := c.Get(claimsKey)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+	}
+	email := claims.(*token.UserClaims).Email
+
+	user, err := h.server.GetUser(c.Request.Context(), email)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -67,6 +75,9 @@ func (h *handler) updateUser(c *gin.Context) {
 
 	// patch user req
 	patchUserReq(user, u)
+	if user.Email == "" {
+		user.Email = email
+	}
 
 	updated, err := h.server.UpdateUser(c.Request.Context(), user)
 	if err != nil {
@@ -114,13 +125,13 @@ func (h *handler) loginUser(c *gin.Context) {
 	}
 
 	// create JWT
-	accessToken, accessClaims, err := h.tokenMaker.CreateToken(gu.ID, gu.Email, gu.IsAdmin, 15*time.Minute)
+	accessToken, accessClaims, err := h.TokenMaker.CreateToken(gu.ID, gu.Email, gu.IsAdmin, 15*time.Minute)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	refreshToken, refreshClaims, err := h.tokenMaker.CreateToken(gu.ID, gu.Email, gu.IsAdmin, 24*time.Hour)
+	refreshToken, refreshClaims, err := h.TokenMaker.CreateToken(gu.ID, gu.Email, gu.IsAdmin, 24*time.Hour)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -154,12 +165,12 @@ func (h *handler) loginUser(c *gin.Context) {
 }
 
 func (h *handler) logoutUser(c *gin.Context) {
-	// later get session id from token payload
-	id := c.Param("id")
-	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing session ID"})
-		return
+	// Get Context
+	claims, exists := c.Get(claimsKey)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 	}
+	id := claims.(*token.UserClaims).RegisteredClaims.ID
 
 	if err := h.server.DeleteSession(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -176,7 +187,7 @@ func (h *handler) renewAccessToken(c *gin.Context) {
 		return
 	}
 
-	refreshClaims, err := h.tokenMaker.VerifyToken(req.RefreshToken)
+	refreshClaims, err := h.TokenMaker.VerifyToken(req.RefreshToken)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -198,7 +209,7 @@ func (h *handler) renewAccessToken(c *gin.Context) {
 		return
 	}
 
-	accessToken, accessClaims, err := h.tokenMaker.CreateToken(refreshClaims.ID, refreshClaims.Email, refreshClaims.IsAdmin, 15*time.Minute)
+	accessToken, accessClaims, err := h.TokenMaker.CreateToken(refreshClaims.ID, refreshClaims.Email, refreshClaims.IsAdmin, 15*time.Minute)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -213,11 +224,12 @@ func (h *handler) renewAccessToken(c *gin.Context) {
 }
 
 func (h *handler) revokeSession(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing session ID"})
-		return
+	// Get Context
+	claims, exists := c.Get(claimsKey)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 	}
+	id := claims.(*token.UserClaims).RegisteredClaims.ID
 
 	if err := h.server.RevokeSession(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

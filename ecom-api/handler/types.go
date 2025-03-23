@@ -9,13 +9,13 @@ import (
 
 type handler struct {
 	server     *server.Server
-	tokenMaker *token.JWTMaker
+	TokenMaker *token.JWTMaker
 }
 
 func NewHandler(server *server.Server, secretKey string) *handler {
 	return &handler{
 		server:     server,
-		tokenMaker: token.NewJWTMaker(secretKey),
+		TokenMaker: token.NewJWTMaker(secretKey),
 	}
 }
 

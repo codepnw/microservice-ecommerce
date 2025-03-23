@@ -22,7 +22,7 @@ type Order struct {
 	TaxPrice      float32    `db:"tax_price"`
 	ShippingPrice float32    `db:"shipping_price"`
 	TotalPrice    float32    `db:"total_price"`
-	UserID        string     `db:"user_id"`
+	UserID        int64     `db:"user_id"`
 	CreatedAt     time.Time  `db:"created_at"`
 	UpdatedAt     *time.Time `db:"updated_at"`
 	Items         []OrderItem

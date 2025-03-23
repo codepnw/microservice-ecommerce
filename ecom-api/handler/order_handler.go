@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/codepnw/microservice-ecommerce/ecom-api/store"
+	"github.com/codepnw/microservice-ecommerce/token"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,7 +16,15 @@ func (h *handler) createOrder(c *gin.Context) {
 		return
 	}
 
-	created, err := h.server.CreateOrder(c.Request.Context(), toStoreOrder(o))
+	// Get Context
+	claims, exists := c.Get(claimsKey)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+	}
+	so := toStoreOrder(o)
+	so.UserID = claims.(*token.UserClaims).ID
+
+	created, err := h.server.CreateOrder(c.Request.Context(), so)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -26,14 +35,14 @@ func (h *handler) createOrder(c *gin.Context) {
 }
 
 func (h *handler) getOrder(c *gin.Context) {
-	id := c.Param("id")
-	idInt, err := strconv.ParseInt(id, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "error pasing ID"})
-		return
+	// Get Context
+	claims, exists := c.Get(claimsKey)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 	}
+	id := claims.(*token.UserClaims).ID
 
-	order, err := h.server.GetOrder(c.Request.Context(), idInt)
+	order, err := h.server.GetOrder(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
